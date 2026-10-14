@@ -38,8 +38,8 @@ public class Startseite
 		JButton kontaktButton = new JButton("Kontakt");
 		kontaktButton.addActionListener(e -> {
 			System.out.println("Kontakt geklickt!");
-			// KontaktCsv kontaktCsv = new KontaktCsv();
-			// kontaktCsv.kontakte();
+			KontaktCSV kontaktCsv = new KontaktCSV();
+			kontaktCsv.kontakte();
 		});
 		panel.add(kontaktButton, panel.gbc);
 

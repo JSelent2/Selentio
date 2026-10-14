@@ -39,7 +39,7 @@ public class KontaktCSV
 		}
 	}
 
-	public void kontakte_anlegen()
+	public void kontakte()
 	{
 		kontakte.removeAll();
 
