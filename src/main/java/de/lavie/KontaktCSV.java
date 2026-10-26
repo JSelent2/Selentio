@@ -5,6 +5,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import javax.swing.*;
+import javax.swing.event.TableModelEvent;
+import javax.swing.table.DefaultTableModel;
 
 import java.io.*;
 import java.nio.file.Files;
@@ -13,6 +15,12 @@ import java.nio.file.Paths;
 
 public class KontaktCSV
 {
+	DefaultTableModel model;
+	JTable table;
+	Path path = Paths.get("C:\\Users\\Jselent\\Desktop\\Neuer Ordner\\CSV\\daten.csv");
+	int buttonClickCounter = 1;
+	JScrollPane scrollPane;
+	
 	Pageview kontakte = new Pageview(MainWindow.fenster, "Kontakte", Color.GRAY, Color.WHITE);
 
 	public ArrayList<String> CsvNamen = new ArrayList<>();
@@ -69,27 +77,26 @@ public class KontaktCSV
 			int index = i;
 			SButton kontakt_button = new SButton(CsvNamen.get(index), index);
 			kontakt_button.addActionListener(e -> {
-				Path path = Paths.get("C:\\Users\\Jselent\\Desktop\\Neuer Ordner\\CSV\\daten.csv");
-				try
+				if (buttonClickCounter % 2 == 1)
 				{
-					List<String> lines = Files.readAllLines(path);
-					for (String line : lines)
-					{
-						String[] values = line.split(";");
-						JLabel message = new JLabel("E-Mail: " + values[0] + "Vorname: " + values[1] + "Nachname: "
-								+ values[2] + "MitarbeiterID: " + values[3] + "Telefonnummer: " + values[4]);
-					}
+					useTable(); //Loads a table with the data from the CSV file
+					System.out.println("buttonClickCounter modulo 2 = " + buttonClickCounter % 2);
+					MainWindow.fenster.repaint();
+					MainWindow.fenster.revalidate();
+					buttonClickCounter++;
 				}
-				catch (IOException ex)
+				else
 				{
-					ex.printStackTrace();
+					MainWindow.fenster.remove(scrollPane);
+					MainWindow.fenster.remove(table);
+					MainWindow.fenster.repaint();
+					MainWindow.fenster.revalidate();
+					buttonClickCounter++;
 				}
-				MainWindow.fenster.repaint();
-				MainWindow.fenster.revalidate();
 			});
 			kontakte.gbc.gridy++;
 			kontakte.add(kontakt_button, kontakte.gbc);
-			kontakte.gbc.gridx++;
+			kontakte.gbc.gridx = 2;
 			SButton delete_button = new SButton("Delete", index);
 			kontakte.add(delete_button, kontakte.gbc);
 			delete_button.addActionListener(e -> {
@@ -105,12 +112,8 @@ public class KontaktCSV
 				{
 					ex.printStackTrace();
 				}
-			});
-			kontakte.gbc.gridx++;
-			SButton edit_button = new SButton("Edit", index);
-			kontakte.add(edit_button, kontakte.gbc);
-			edit_button.addActionListener(e -> {
-				JTextField text_editor = new JTextField();
+				MainWindow.fenster.repaint();
+				MainWindow.fenster.revalidate();
 			});
 		}
 		MainWindow.fenster.add(kontakte);
@@ -124,7 +127,132 @@ public class KontaktCSV
 	{
 		kontakte.gbc.gridy++;
 		JTextField kontakt_eingabe = new JTextField(40);
+		kontakte.add(kontakt_eingabe, kontakte.gbc);
+		kontakt_eingabe.addActionListener(e ->
+		{
+			String string_kontakt_eingabe = kontakt_eingabe.getText();
+			String[] line = string_kontakt_eingabe.split(";");
+			int row_count = line.length;
+			if(string_kontakt_eingabe != null && row_count == 5)
+			{
+				int line_number = 0;
+				try (BufferedReader reader = new BufferedReader(new FileReader("C:\\Users\\Jselent\\Desktop\\Neuer Ordner\\CSV\\daten.csv")))
+				{
+					while (reader.readLine() != null)
+					{
+						line_number++;
+					}
+				}
+				catch (IOException ex)
+				{
+					ex.printStackTrace();
+				}
+				System.out.println("Wert von integer line_count in zeile 132: " + row_count + " " + line[0] +" "+ line[1] +" "+ line[2] +" "+  line[3] +" "+ line[4]);
+				try (BufferedWriter writer = new BufferedWriter(new FileWriter("C:\\Users\\Jselent\\Desktop\\Neuer Ordner\\CSV\\daten.csv")))
+				{
+					for (int k = 0; k < line_number; k++)
+					{
+						String existingLine = Files.readAllLines(Path.of("C:\\Users\\Jselent\\Desktop\\Neuer Ordner\\CSV\\daten.csv")).get(k);
+						writer.write(existingLine);
+						writer.newLine();
+					}
+					writer.write(line[0] + ";" + line[1] + ";" + line[2] + ";" + line[3] + ";" + line[4]);
+					writer.newLine();
+					kontakte.remove(kontakt_eingabe);
+					kontakte();
+				}
+				catch (IOException ex)
+				{
+					ex.printStackTrace();
+				}
+			}
+			else 
+			{
+				System.out.println("Ungültige Eingabe. Bitte geben Sie 5 Werte durch Semikolons getrennt ein.");
+			}
+		});
 		
+		MainWindow.fenster.repaint();
+		MainWindow.fenster.revalidate();
+	}
+	
+	public void useTable()
+	{
+		try
+		{
+			String[] spalten_namen = {"E-Mail: ", "Vorname: ", "Nachname: ", "MitarbeiterID: ", "Telefonnummer: "};
+			kontakte.gbc.gridy++;
+			model = new DefaultTableModel(null, spalten_namen);
+			table = new JTable(model);
+			List<String> lines = Files.readAllLines(path);
+			int columnCount = 0;
+			int rowCount = 0;
+			for (String line : lines)
+			{
+				String[] values = line.split(";");
+				model.addRow(values);
+				
+				System.out.println("Zeile hinzugefügt: " + line + "columnCount: " + columnCount);
+				
+				if (model.getValueAt(rowCount, 0) == null || model.getValueAt(rowCount, 0) == "" || model.getValueAt(rowCount, 0) == "NULL")
+				{
+					model.removeRow(rowCount--);
+				}
+				rowCount++;
+			}
+			model.addRow(new Object[]{"", "", "", "", ""});
+			kontakte.gbc.weightx = 1;
+			kontakte.gbc.gridx = 1;
+			scrollPane = new JScrollPane(table);
+			scrollPane.setPreferredSize(new java.awt.Dimension(1400, 900));
+			kontakte.add(scrollPane, kontakte.gbc);
+			model.addTableModelListener(e1 ->
+			{
+				if (e1.getType() == TableModelEvent.UPDATE)
+				{
+					int row = e1.getFirstRow();
+					int column = e1.getColumn();
+					String newValue = (String) model.getValueAt(row, column);
+					System.out.println("Wert in Zeile " + row + ", Spalte " + column + " wurde geändert zu: " + newValue);
+					updateTable();
+				}
+				MainWindow.fenster.repaint();
+				MainWindow.fenster.revalidate();
+			});
+		}
+		catch (IOException ex)
+		{
+			ex.printStackTrace();
+		}
+		
+	}
+	
+	void updateTable()
+	{
+		try
+		{
+			List<String> updatedLines = new ArrayList<>();
+			for (int i1 = 0; i1 < model.getRowCount(); i1++)
+			{
+				StringBuilder stringBuilder = new StringBuilder();
+				for (int j = 0; j < model.getColumnCount(); j++)
+				{
+					stringBuilder.append(model.getValueAt(i1, j));
+					if (j < model.getColumnCount() - 1)
+					{
+						stringBuilder.append(";");
+					}
+				}
+				updatedLines.add(stringBuilder.toString());
+			}
+			Files.write(path, updatedLines);
+		}
+		catch (IOException ex)
+		{
+			ex.printStackTrace();
+		}
+		MainWindow.fenster.repaint();
+		MainWindow.fenster.revalidate();
 	}
 
 }
